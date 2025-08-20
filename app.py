@@ -46,7 +46,7 @@ tracked_users = {
 my_location = {"coords": [33.8864, -84.4111], "color": "red", "label": "Me"}
 
 # API key (constant)
-API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyc3B2c2Rmd2FxanR1aHltdWJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODM1ODY0MjcsImV4cCI6MTk5OTE2MjQyN30.2AItrHcB7A5bSZ_dfd455kvLL8fXLL7IrfMBoFmkGww"
+API_KEY = "API_KEY"
 
 # Create a session for persistent headers
 session = requests.Session()
