@@ -6,6 +6,9 @@ import threading
 from datetime import datetime
 import pytz
 import os
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 # Supabase URL
 BASE_URL = "https://erspvsdfwaqjtuhymubj.supabase.co"
@@ -46,7 +49,7 @@ tracked_users = {
 my_location = {"coords": [33.8864, -84.4111], "color": "red", "label": "Me"}
 
 # API key (constant)
-API_KEY = "API_KEY"
+API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVyc3B2c2Rmd2FxanR1aHltdWJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODM1ODY0MjcsImV4cCI6MTk5OTE2MjQyN30.2AItrHcB7A5bSZ_dfd455kvLL8fXLL7IrfMBoFmkGww"
 
 # Create a session for persistent headers
 session = requests.Session()
@@ -114,6 +117,47 @@ def test_get_name(uid):
     print(f"✅ Name for {uid}: {name}")
     return name
 
+def run_tests():
+    print("========== RUNNING TESTS ==========")
+
+    # 1. Test refresh token
+    print("\n[TEST] Refresh Token")
+    success = refresh_tokens()
+    print("Refresh result:", success)
+    print("New Access Token (first 10 chars):", access_token[:10])
+
+    # 2. Test get_location
+    print("\n[TEST] Get Location")
+    for uid in tracked_users.keys():
+        data = get_location(uid)
+        if data:
+            print(f"UID {uid} → Name: {data.get('fn')} {data.get('ln')} | Lat: {data.get('l')} | Lon: {data.get('lo')}")
+        else:
+            print(f"UID {uid} → ❌ No data")
+
+    # 3. Test make_request
+    print("\n[TEST] Make Request")
+    for uid in tracked_users.keys():
+        print(f"Requesting location update for {uid}...")
+        make_request(uid)
+
+    # 4. Test test_get_name
+    print("\n[TEST] Get Name")
+    for uid in tracked_users.keys():
+        name = test_get_name(uid)
+        print(f"UID {uid} → {name}")
+
+    # 5. Test poll_locations (just 1 cycle instead of infinite loop)
+    print("\n[TEST] Poll Locations (single cycle)")
+    for uid in tracked_users.keys():
+        make_request(uid)
+        data = get_location(uid)
+        if data:
+            tracked_users[uid]["data"] = data
+            print(f"Updated {uid}: {data.get('l')}, {data.get('lo')}, name: {data.get('fn')}")
+
+    print("\n✅ All tests finished")
+
 
 def make_request(target_id):
     URL = f"{BASE_URL}/rest/v1/rpc/location-request"
@@ -178,6 +222,7 @@ def get_location(target_id):
 
             response.raise_for_status()
             data = response.json()
+            print(data)
             return data
 
         except Exception as e:
@@ -200,7 +245,7 @@ def poll_locations(interval=10):
                 tracked_users[uid]["data"] = data
 
                 # Always update label from Supabase API
-                tracked_users[uid]["label"] = data.get("n", "Unknown")
+                tracked_users[uid]["label"] = data.get("fn", "Unknown")
 
                 print(f"Updated {uid}: {data['l']}, {data['lo']}, name: {tracked_users[uid]['label']}")
             else:
@@ -267,8 +312,8 @@ def get_map_data():
         user_data.append({
             "type": "tracked",
             "coords": [lat, lon],
-            "label": full_name,   # ✅ Jack Munger
-            "icon": initials,     # ✅ JM on map pin
+            "label": full_name,   
+            "icon": initials,     
             "activity": activity,
             "in_car": in_car,
             "city": city,
@@ -293,8 +338,12 @@ def update_my_location():
 
 
 if __name__ == "__main__":
-    print(f"Starting with access token: {access_token[:10]}...")
-    # Start background polling
-    t = threading.Thread(target=poll_locations, daemon=True)
-    t.start()
-    app.run(debug=True)
+    import sys
+
+    if len(sys.argv) > 1 and sys.argv[1] == "test":
+        run_tests()
+    else:
+        print(f"Starting with access token: {access_token[:10]}...")
+        t = threading.Thread(target=poll_locations, daemon=True)
+        t.start()
+        app.run(debug=True)
